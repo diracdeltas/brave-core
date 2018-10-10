@@ -16,10 +16,14 @@
 #include "base/threading/thread_restrictions.h"
 #include "brave/browser/brave_browser_process_impl.h"
 #include "brave/components/brave_shields/browser/ad_block_service.h"
+#include "brave/components/brave_shields/browser/brave_shields_util.h"
 #include "brave/components/brave_shields/browser/dat_file_util.h"
+#include "brave/components/brave_shields/common/brave_shield_constants.h"
 #include "brave/vendor/tracking-protection/TPParser.h"
+#include "components/content_settings/core/browser/host_content_settings_map.h"
 
-#define DAT_FILE "TrackingProtection.dat"
+#define NAVIGATION_TRACKERS_FILE "TrackingProtection.dat"
+#define STORAGE_TRACKERS_FILE "StorageTrackingProtection.dat"
 #define DAT_FILE_VERSION "1"
 #define THIRD_PARTY_HOSTS_CACHE_SIZE 20
 
@@ -45,6 +49,7 @@ TrackingProtectionService::TrackingProtectionService()
       "syndication.twitter.com",
       "cdn.syndication.twimg.com"
     }),
+    first_party_storage_trackers_initailized_(false),
     weak_factory_(this) {
   DETACH_FROM_SEQUENCE(sequence_checker_);
 }
@@ -90,6 +95,50 @@ bool TrackingProtectionService::ShouldStartRequest(const GURL& url,
   return false;
 }
 
+bool TrackingProtectionService::ShouldStoreState(HostContentSettingsMap* map, const GURL& top_origin_url, 
+  const GURL& origin_url) {
+
+  if (!first_party_storage_trackers_initailized_) {
+    LOG(INFO) << "First party storage trackers not initialized";
+    return true;
+  }  
+  std::string host = origin_url.host();
+
+  bool allow_brave_shields = IsAllowContentSetting(
+      map, top_origin_url, origin_url, CONTENT_SETTINGS_TYPE_PLUGINS,
+      brave_shields::kBraveShields);
+
+  bool allow_trackers = IsAllowContentSetting(
+      map, top_origin_url, origin_url, CONTENT_SETTINGS_TYPE_PLUGINS, 
+      brave_shields::kTrackers);
+
+  bool denyStorage = std::find(first_party_storage_trackers_.begin(), first_party_storage_trackers_.end(), host) 
+        != first_party_storage_trackers_.end();
+
+  return !(allow_brave_shields && !allow_trackers && denyStorage);
+}
+
+void TrackingProtectionService::ParseStorageTrackersData() {
+  if (storage_trackers_buffer_.empty()) {
+    LOG(ERROR) << "Could not obtain tracking protection data";
+    return;
+  }
+
+  std::stringstream st(std::string(storage_trackers_buffer_.begin(), storage_trackers_buffer_.end()));
+  std::string tracker;
+
+  while(std::getline(st, tracker, ',')) {
+    first_party_storage_trackers_.push_back(tracker);
+  }
+
+  if(first_party_storage_trackers_.empty()) {
+    LOG(ERROR) << "No first party trackers found";
+    return;
+  }
+
+  first_party_storage_trackers_initailized_ = true;
+}
+
 bool TrackingProtectionService::Init() {
   Register(kTrackingProtectionComponentName,
            g_tracking_protection_component_id_,
@@ -113,13 +162,22 @@ void TrackingProtectionService::OnComponentReady(
     const std::string& component_id,
     const base::FilePath& install_dir,
     const std::string& manifest) {
-  base::FilePath dat_file_path =
-      install_dir.AppendASCII(DAT_FILE_VERSION).AppendASCII(DAT_FILE);
+  base::FilePath navigation_tracking_protection_path =
+      install_dir.AppendASCII(DAT_FILE_VERSION).AppendASCII(NAVIGATION_TRACKERS_FILE);
+      
+  GetTaskRunner()->PostTaskAndReply(
+      FROM_HERE,
+      base::Bind(&GetDATFileData, navigation_tracking_protection_path, &buffer_),
+      base::Bind(&TrackingProtectionService::OnDATFileDataReady,
+                 weak_factory_.GetWeakPtr()));
+
+  base::FilePath storage_tracking_protection_path =
+      install_dir.AppendASCII(DAT_FILE_VERSION).AppendASCII(STORAGE_TRACKERS_FILE);
 
   GetTaskRunner()->PostTaskAndReply(
       FROM_HERE,
-      base::Bind(&GetDATFileData, dat_file_path, &buffer_),
-      base::Bind(&TrackingProtectionService::OnDATFileDataReady,
+      base::Bind(&GetDATFileData, storage_tracking_protection_path, &storage_trackers_buffer_),
+      base::Bind(&TrackingProtectionService::ParseStorageTrackersData,
                  weak_factory_.GetWeakPtr()));
 }
 

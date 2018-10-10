@@ -20,8 +20,14 @@ struct Referrer;
 }
 
 class GURL;
+class HostContentSettingsMap;
 
 namespace brave_shields {
+
+bool IsAllowContentSetting(HostContentSettingsMap* map,
+    const GURL& primary_url, const GURL& secondary_url,
+    ContentSettingsType setting_type,
+    const std::string& resource_identifier);
 
 bool IsAllowContentSettingFromIO(net::URLRequest* request,
     const GURL& primary_url, const GURL& secondary_url,
