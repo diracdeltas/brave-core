@@ -8,6 +8,7 @@ const char brave_extension_id[] = "mnojpmjdmbbfmejpflffifhffcmidifd";
 const char brave_rewards_extension_id[] = "jidkidbbcafjabdphckchenhfomhnfma";
 const char brave_webtorrent_extension_id[] = "lgjmpdmojkpocjcopdikifhejkkjglho";
 const char widevine_extension_id[] = "oimompecagnajdejgnnjijobebaeigek";
+const char crl_set_extension_id[] = "hfnkpimlhhgieaddgfemjhofmfblmnib";
 
 const char pdfjs_extension_id[] = "oemmndcbldboiebfnladdacbdfmadadm";
 const char pdfjs_extension_name[] = "PDF Viewer (PDF.js)";
