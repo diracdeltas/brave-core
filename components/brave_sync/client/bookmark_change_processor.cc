@@ -206,7 +206,7 @@ void BookmarkChangeProcessor::BookmarkNodeAdded(BookmarkModel* model,
       node->id(), jslib_const::kActionCreate);
   sync_client_->SendGetBookmarkOrder(
       prev_node_order, next_node_order, parent_node_order);
-  // responds in OnSaveBookmarkOrder
+  // responds in OnGetBookmarkOrder
 }
 
 void BookmarkChangeProcessor::OnWillRemoveBookmarks(BookmarkModel* model,
@@ -301,7 +301,7 @@ void BookmarkChangeProcessor::BookmarkNodeMoved(BookmarkModel* model,
       node->id(), jslib_const::kActionUpdate);
   sync_client_->SendGetBookmarkOrder(
       prev_node_order, next_node_order, parent_node_order);
-  // responds in OnSaveBookmarkOrder
+  // responds in OnGetBookmarkOrder
 }
 
 void BookmarkChangeProcessor::BookmarkNodeFaviconChanged(

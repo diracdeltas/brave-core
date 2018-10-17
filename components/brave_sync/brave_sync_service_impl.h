@@ -64,6 +64,7 @@ class BraveSyncServiceImpl : public BraveSyncService,
   BraveSyncClient* GetSyncClient() override;
 
  private:
+  friend class BraveSyncServiceImplTestAccess;
   // SyncMessageHandler overrides
   void BackgroundSyncStarted() override;
   void BackgroundSyncStopped() override;
